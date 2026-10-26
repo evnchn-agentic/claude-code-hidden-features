@@ -43,6 +43,8 @@ sed -n "${s},${e}p" "$TMP"
 echo; echo "## UNDOCUMENTED — in the binary's CLI block but NOT in \`claude --help\`:"
 sed -n "${s},${e}p" "$TMP" | grep -oE '\-\-[a-z][a-z0-9-]+' | sort -u > "$TMP.cli"
 "$BIN" --help 2>/dev/null | grep -oE '\-\-[a-z][a-z0-9-]+' | sort -u > "$TMP.help"
+# Without its --help, every flag would be reported as undocumented.
+[ -s "$TMP.help" ] || { echo "ERROR: '$BIN --help' printed no flags; cannot diff." >&2; exit 2; }
 comm -23 "$TMP.cli" "$TMP.help"
 rm -f "$TMP.cli" "$TMP.help"
 echo "# (Read each flag's description in the block above before recommending it — some are SDK-internal/deep-link plumbing, not operator knobs. A lower bound: some builds declare hidden flags outside this block.)" >&2
