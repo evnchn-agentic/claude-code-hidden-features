@@ -9,8 +9,8 @@ description: Use when the operator wants Claude Code capabilities the product un
 
 Claude Code under-surfaces its own capability in two ways, and the same powerful-main-agent move fixes both:
 
-- **Mode A — drip-fed tips.** A fixed catalog (41 in 2.1.196) is shown one-at-a-time by a *small* side-model that sees only the current session, picks from a pre-filtered eligible subset, and declines most turns. It can never say "here are the N you're missing."
-- **Mode B — `--help`-hidden flags.** The binary's CLI defines ~74 flags; `--help` documents ~60. The rest (`--thinking-display`, `--bare`, `--max-budget-usd`, `--plan-mode-instructions`, …) are real but invisible.
+- **Mode A — drip-fed tips.** A fixed catalog (41 in 2.1.196) is shown one-at-a-time by a *small* side-model that sees only the current session, picks from a pre-filtered eligible subset, and declines most turns. It can never say "here are the N you're missing." From 2.1.308 the classifier is gone; the catalog is spinner tips with cooldowns (70 on 2.1.310).
+- **Mode B — `--help`-hidden flags.** On 2.1.310 the flag block holds 49 flags `--help` omits (`--thinking-display`, `--plan-mode-instructions`, `--task-budget`, …): real but invisible. A lower bound; some builds declare a few outside the block.
 
 **The unifying thesis:** the in-product surfaces are gimped (small model / truncated help). The main agent — powerful, with the operator's full JSONL + memory + settings — mines the **installed binary** and **triages** what it finds against what this operator actually does. That's the value the product can't deliver.
 
@@ -80,6 +80,7 @@ Lead with the verdict + 🔥 set; then ✅; then 💤/⚙️ named so they can s
 
 ## Architecture notes
 
-- Spinner tips + contextual tips share one catalog (`spinnerTipsOverride` replaces the pool). Classifier prompt: "You are watching someone use Claude Code…", takes `<eligible_ids>`/`<ineligible_ids>`. A `rate_tip_reception` tool scores whether the operator acted. Catalog DATA and classifier PROMPT live in **different** binary regions.
-- The CLI flag block is one contiguous commander region (program tagline → issues-URL footer). `extract_flags.sh` brackets exactly that.
+- Spinner tips + contextual tips share one catalog (`spinnerTipsOverride` replaces the pool). Classifier prompt: "You are watching someone use Claude Code…", takes `<eligible_ids>`/`<ineligible_ids>`. A `rate_tip_reception` tool scores whether the operator acted. Catalog DATA and classifier PROMPT live in **different** binary regions. (2.1.196. From 2.1.308 the classifier and `rate_tip_reception` are gone; tips are `{id:"…",content:…,cooldownSessions:N}` literals.)
+- The CLI flag block is one contiguous commander region: program tagline → issues-URL footer (2.1.196) or → `run_main_options_built` (2.1.308+). `extract_flags.sh` brackets that, and exits 2 rather than print a block over 1000 lines.
+- `./selftest.sh [binary]` checks both extractors. Run it first on a new Claude Code version.
 - Not for general "can Claude do X?" docs questions (→ `claude-code-guide` agent) or behavioral-drift (→ `bisecting-claude-code-anomalies`).

@@ -40,6 +40,16 @@ if [ -n "${s:-}" ] && [ -n "${e:-}" ] && [ "$e" -gt "$s" ]; then
   s=$((s > 1 ? s - 1 : s))   # back up 1: the first entry's id line precedes its feature text
   sed -n "${s},${e}p" "$TMP"
   echo "# --- catalog block: lines $s..$e of strings output ---" >&2
+# 2.1.308+: the classifier catalog above is gone. Tips are minified object literals,
+# {id:"...",content:...,cooldownSessions:N,...}. Ids are exact; the text is the longest
+# string literal in `content` — best-effort, since some tips build their text in code.
+elif tips="$(grep 'cooldownSessions:' "$TMP" | perl -ne 'for my $c (split /(?=\{id:")/) {
+    next unless $c =~ /^\{id:"([a-z0-9-]+)"/ && $c =~ /cooldownSessions:/; my $id = $1;
+    my ($b) = $c =~ /content:(.*?)cooldownSessions:/s;
+    my ($t) = sort { length $b <=> length $a } ($b // "") =~ /("(?:[^"\\]|\\.)*"|`[^`]*`)/g;
+    print "id: $id\n  ", $t // "(text built in code)", "\n" }')" && [ -n "$tips" ]; then
+  printf '%s\n' "$tips"
+  echo "# tip catalog (2.1.308+ shape): $(printf '%s\n' "$tips" | grep -c '^id:') tips; id exact, text best-effort" >&2
 else
   echo "WARN: anchors moved (CC build changed the wording). Fallback: showing the" >&2
   echo "      classifier prompt + nearby region so you can re-locate the catalog by hand." >&2
