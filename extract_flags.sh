@@ -17,7 +17,7 @@ fi
 [ -n "$BIN" ] && [ -f "$BIN" ] || { echo "ERROR: could not locate the Claude Code binary. Pass it as \$1." >&2; exit 1; }
 echo "# binary: $BIN" >&2
 
-TMP="$(mktemp)"; trap 'rm -f "$TMP"' EXIT
+TMP="$(mktemp)"; trap 'rm -f "$TMP" "$TMP.cli" "$TMP.help"' EXIT
 strings -n 4 "$BIN" > "$TMP"
 
 # The commander flag block is one contiguous region. Anchor on the program tagline
