@@ -4,8 +4,8 @@ A [Claude Code](https://claude.com/claude-code) skill that surfaces capabilities
 
 Two modes, one thesis: the in-product surfaces are gimped (a small side-model drips tips one at a time; `--help` is truncated). A powerful main agent with your full history can mine the installed binary and rank what it finds for *you*.
 
-- **Mode A — the tip catalog.** Claude Code's "daily tips" come from a fixed catalog (41 entries in 2.1.196) shown one-at-a-time by a small classifier that declines most of the time and only picks from a pre-filtered eligible subset. It can never tell you "here are the N you're missing." This extracts the whole catalog.
-- **Mode B — undocumented CLI flags.** The binary defines ~74 flags; `claude --help` documents ~60. The rest (`--thinking-display`, `--bare`, `--max-budget-usd`, `--plan-mode-instructions`, …) are real but invisible. This diffs the binary's flag block against `--help`.
+- **Mode A — the tip catalog.** Claude Code's "daily tips" come from a fixed catalog (41 entries in 2.1.196) shown one-at-a-time by a small classifier that declines most of the time and only picks from a pre-filtered eligible subset. It can never tell you "here are the N you're missing." This extracts the whole catalog. From 2.1.308 the classifier is gone and the catalog is a list of spinner tips with cooldowns (70 on 2.1.310); the extractor reads either shape.
+- **Mode B — undocumented CLI flags.** On 2.1.310 the binary's flag block holds 49 flags that `claude --help` omits (`--thinking-display`, `--plan-mode-instructions`, `--task-budget`, `--max-turns`, …): real but invisible. This diffs the binary's flag block against that binary's own `--help`. Some builds declare a few hidden flags outside the block, so treat the list as a lower bound.
 
 Both modes **re-extract per version** (nothing is hardcoded) and the output is always a **triage, not a list** — the 🔥 high-leverage few first, every item carrying a one-line evidence-grounded reason, the full set demoted to a collapsed reference.
 
@@ -40,7 +40,7 @@ Run either script directly (`./extract_catalog.sh` / `./extract_flags.sh`); both
 
 ## Provenance
 
-Built and verified (RED/GREEN, both extractors confirmed against 2.1.196) on macOS/arm64. Reverse-engineering of one's own installed CLI via `strings` is standard archaeology; none of this is security-sensitive, and the community already mirrors more (e.g. the full system prompt). Re-run per Claude Code version.
+Built and verified (RED/GREEN, both extractors confirmed against 2.1.196) on macOS/arm64; re-verified on 2.1.308–2.1.310. `./selftest.sh [binary]` checks both extractors against an installed binary. Reverse-engineering of one's own installed CLI via `strings` is standard archaeology; none of this is security-sensitive, and the community already mirrors more (e.g. the full system prompt). Re-run per Claude Code version.
 
 ---
 

@@ -17,19 +17,21 @@ fi
 [ -n "$BIN" ] && [ -f "$BIN" ] || { echo "ERROR: could not locate the Claude Code binary. Pass it as \$1." >&2; exit 1; }
 echo "# binary: $BIN" >&2
 
-TMP="$(mktemp)"; trap 'rm -f "$TMP"' EXIT
+TMP="$(mktemp)"; trap 'rm -f "$TMP" "$TMP.cli" "$TMP.help"' EXIT
 strings -n 4 "$BIN" > "$TMP"
 
 # The commander flag block is one contiguous region. Anchor on the program tagline
-# (start) and the issues-URL footer that immediately follows the last flag (end).
+# (start) and the first end marker after it: the issues-URL footer (2.1.196) or the
+# `run_main_options_built` checkpoint (2.1.308+, where the footer no longer follows).
 START_RE='Claude Code - starts an interactive session by default'
-END_RE='report the issue at https://github.com/anthropics/claude-code/issues'
 s=$(grep -n "$START_RE" "$TMP" | head -1 | cut -d: -f1)
-# END_RE is a generic error string used hundreds of times — take the FIRST match
-# AFTER the flag block starts, which is the footer that terminates the block.
-e=$(awk -v s="${s:-0}" 'NR>s && index($0,"report the issue at https://github.com/anthropics/claude-code/issues"){print NR; exit}' "$TMP")
+# The footer is a generic error string used hundreds of times — take the FIRST match
+# AFTER the flag block starts.
+e=$(awk -v s="${s:-0}" 'NR>s && ($0=="run_main_options_built" || index($0,"report the issue at https://github.com/anthropics/claude-code/issues")){print NR; exit}' "$TMP")
 
-if [ -z "${s:-}" ] || [ -z "${e:-}" ] || [ "$e" -le "$s" ]; then
+# A real block is a few hundred lines. Anything bigger means the end marker matched far
+# past the block, and the "undocumented" list would be every --word in the binary.
+if [ -z "${s:-}" ] || [ -z "${e:-}" ] || [ "$e" -le "$s" ] || [ $((e - s)) -gt 1000 ]; then
   echo "WARN: anchors moved. Re-locate by grepping the binary strings for '--thinking-display'" >&2
   echo "      or 'Display help for command' and read the surrounding block." >&2
   exit 2
@@ -40,7 +42,9 @@ sed -n "${s},${e}p" "$TMP"
 
 echo; echo "## UNDOCUMENTED — in the binary's CLI block but NOT in \`claude --help\`:"
 sed -n "${s},${e}p" "$TMP" | grep -oE '\-\-[a-z][a-z0-9-]+' | sort -u > "$TMP.cli"
-claude --help 2>/dev/null | grep -oE '\-\-[a-z][a-z0-9-]+' | sort -u > "$TMP.help"
+"$BIN" --help 2>/dev/null | grep -oE '\-\-[a-z][a-z0-9-]+' | sort -u > "$TMP.help"
+# Without its --help, every flag would be reported as undocumented.
+[ -s "$TMP.help" ] || { echo "ERROR: '$BIN --help' printed no flags; cannot diff." >&2; exit 2; }
 comm -23 "$TMP.cli" "$TMP.help"
 rm -f "$TMP.cli" "$TMP.help"
-echo "# (Read each flag's description in the block above before recommending it — some are SDK-internal/deep-link plumbing, not operator knobs.)" >&2
+echo "# (Read each flag's description in the block above before recommending it — some are SDK-internal/deep-link plumbing, not operator knobs. A lower bound: some builds declare hidden flags outside this block.)" >&2
